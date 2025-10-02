@@ -106,9 +106,9 @@ public:
 
 }
 
-void write_png(const Pixmap& pixmap, const char* file_name) {
-	const std::uint32_t width = pixmap.get_width();
-	const std::uint32_t height = pixmap.get_height();
+void Pixmap::write_png(const char* file_name) const {
+	const std::uint32_t width = get_width();
+	const std::uint32_t height = get_height();
 	std::ofstream file(file_name);
 
 	write<std::uint8_t>(file, {137, 'P', 'N', 'G', 13, 10, 26, 10});
@@ -148,7 +148,7 @@ void write_png(const Pixmap& pixmap, const char* file_name) {
 		write<std::uint16_t>(idat_stream, ~length);
 		write<std::uint8_t>(data_stream, 0); // filter type
 		for (std::uint32_t x = 0; x < width; ++x) {
-			const Color color = pixmap.get_pixel(x, y).unpremultiply();
+			const Color color = get_pixel(x, y).unpremultiply();
 			write<std::uint8_t>(data_stream, random.dither(color.r));
 			write<std::uint8_t>(data_stream, random.dither(color.g));
 			write<std::uint8_t>(data_stream, random.dither(color.b));

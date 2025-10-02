@@ -7,5 +7,5 @@ int main() {
 			pixmap.add_pixel(x, y, Color(1, 1, 0));
 		}
 	}
-	write_png(pixmap, "out.png");
+	pixmap.write_png("out.png");
 }

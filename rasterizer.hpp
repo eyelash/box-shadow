@@ -98,6 +98,5 @@ public:
 		size_t i = y * width + x;
 		pixels[i] = pixels[i] + color;
 	}
+	void write_png(const char* file_name) const;
 };
-
-void write_png(const Pixmap& pixmap, const char* file_name);
