@@ -6,9 +6,7 @@ All rights reserved.
 */
 
 #include "rasterizer.hpp"
-#include <cstdint>
 #include <fstream>
-#include <cmath>
 
 namespace {
 
@@ -85,25 +83,6 @@ template <class T, class S> void write(S& stream, std::initializer_list<T> ts) {
 	}
 }
 
-class Random {
-	uint64_t s[2] = {0xC0DEC0DEC0DEC0DE, 0xC0DEC0DEC0DEC0DE};
-public:
-	uint64_t next() {
-		// xorshift128+
-		const uint64_t result = s[0] + s[1];
-		const uint64_t s1 = s[0] ^ (s[0] << 23);
-		s[0] = s[1];
-		s[1] = s1 ^ s[1] ^ (s1 >> 18) ^ (s[1] >> 5);
-		return result;
-	}
-	float next_float() {
-		return std::ldexp(static_cast<float>(next()), -64);
-	}
-	unsigned char dither(float value) {
-		return clamp(value * 255.f + next_float(), 0.f, 255.f);
-	}
-};
-
 }
 
 void Pixmap::write_png(const char* file_name) const {
@@ -149,10 +128,10 @@ void Pixmap::write_png(const char* file_name) const {
 		write<std::uint8_t>(data_stream, 0); // filter type
 		for (std::uint32_t x = 0; x < width; ++x) {
 			const Color color = get_pixel(x, y).unpremultiply();
-			write<std::uint8_t>(data_stream, random.dither(color.r));
-			write<std::uint8_t>(data_stream, random.dither(color.g));
-			write<std::uint8_t>(data_stream, random.dither(color.b));
-			write<std::uint8_t>(data_stream, random.dither(color.a));
+			write<std::uint8_t>(data_stream, dither(random, color.r));
+			write<std::uint8_t>(data_stream, dither(random, color.g));
+			write<std::uint8_t>(data_stream, dither(random, color.b));
+			write<std::uint8_t>(data_stream, dither(random, color.a));
 		}
 	}
 	write<std::uint32_t>(idat_stream, adler);

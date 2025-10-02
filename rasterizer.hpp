@@ -7,6 +7,8 @@ All rights reserved.
 
 #include <vector>
 #include <cstddef>
+#include <cstdint>
+#include <cmath>
 
 constexpr float clamp(float value, float min, float max) {
 	return value < min ? min : (max < value ? max : value);
@@ -77,6 +79,26 @@ struct Color {
 
 constexpr Color blend(const Color& dst, const Color& src) {
 	return src + dst * (1.f - src.a);
+}
+
+class Random {
+	uint64_t s[2] = {0xC0DEC0DEC0DEC0DE, 0xC0DEC0DEC0DEC0DE};
+public:
+	uint64_t next() {
+		// xorshift128+
+		const uint64_t result = s[0] + s[1];
+		const uint64_t s1 = s[0] ^ (s[0] << 23);
+		s[0] = s[1];
+		s[1] = s1 ^ s[1] ^ (s1 >> 18) ^ (s[1] >> 5);
+		return result;
+	}
+	float next_float() {
+		return std::ldexp(static_cast<float>(next()), -64);
+	}
+};
+
+inline unsigned char dither(Random& random, float value) {
+	return clamp(value * 255.f + random.next_float(), 0.f, 255.f);
 }
 
 class Pixmap {
