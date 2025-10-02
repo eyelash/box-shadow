@@ -6,7 +6,6 @@ All rights reserved.
 */
 
 #include "rasterizer.hpp"
-#include "png.hpp"
 #include <cstdint>
 #include <fstream>
 #include <cmath>

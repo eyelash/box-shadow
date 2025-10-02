@@ -1,5 +1,4 @@
 #include "rasterizer.hpp"
-#include "png.hpp"
 
 int main() {
 	Pixmap pixmap(100, 100);

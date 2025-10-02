@@ -7,7 +7,6 @@ All rights reserved.
 
 #include <vector>
 #include <cstddef>
-#include <memory>
 
 constexpr float clamp(float value, float min, float max) {
 	return value < min ? min : (max < value ? max : value);
@@ -80,21 +79,6 @@ constexpr Color blend(const Color& dst, const Color& src) {
 	return src + dst * (1.f - src.a);
 }
 
-struct Paint {
-	virtual Color evaluate(const Point& point) = 0;
-};
-
-struct Shape {
-	std::vector<Segment> segments;
-	std::shared_ptr<Paint> paint;
-	Shape(const std::shared_ptr<Paint>& paint): paint(paint) {}
-	void append_segment(const Point& p0, const Point& p1) {
-		if (p0.y != p1.y) {
-			segments.emplace_back(p0, p1);
-		}
-	}
-};
-
 class Pixmap {
 	std::vector<Color> pixels;
 	size_t width;
@@ -115,3 +99,5 @@ public:
 		pixels[i] = pixels[i] + color;
 	}
 };
+
+void write_png(const Pixmap& pixmap, const char* file_name);
