@@ -145,8 +145,16 @@ struct Vector {
 	}
 };
 
-constexpr float dot(const Vector& v0, const Vector& v1) {
-	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z;
+constexpr float dot(const Vector& a, const Vector& b) {
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+constexpr Vector cross(const Vector& a, const Vector& b) {
+	return Vector(
+		a.y * b.z - b.y * a.z,
+		a.z * b.x - b.z * a.x,
+		a.x * b.y - b.x * a.y
+	);
 }
 
 inline float length(const Vector& v) {
