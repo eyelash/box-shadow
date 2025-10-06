@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2017-2018, Elias Aebi
+Copyright (c) 2017-2025, Elias Aebi
 All rights reserved.
 
 */
@@ -12,6 +12,10 @@ All rights reserved.
 
 constexpr float clamp(float value, float min, float max) {
 	return value < min ? min : (max < value ? max : value);
+}
+
+constexpr bool between(float value, float min, float max) {
+	return value >= min && value < max;
 }
 
 struct Point {
@@ -122,3 +126,116 @@ public:
 	}
 	void write_png(const char* file_name) const;
 };
+
+struct Vector {
+	float x, y, z;
+	constexpr Vector(float x, float y, float z): x(x), y(y), z(z) {}
+	constexpr Vector(): Vector(0.f, 0.f, 0.f) {}
+	constexpr Vector operator +(const Vector& v) const {
+		return Vector(x + v.x, y + v.y, z + v.z);
+	}
+	constexpr Vector operator -(const Vector& v) const {
+		return Vector(x - v.x, y - v.y, z - v.z);
+	}
+	constexpr Vector operator -() const {
+		return Vector(-x, -y, -z);
+	}
+	constexpr Vector operator *(float t) const {
+		return Vector(x * t, y * t, z * t);
+	}
+};
+
+constexpr float dot(const Vector& v0, const Vector& v1) {
+	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z;
+}
+
+inline float length(const Vector& v) {
+	return std::sqrt(dot(v, v));
+}
+
+inline Vector normalize(const Vector& v) {
+	return v * (1.f / length(v));
+}
+
+inline Vector random_vector(Random& random) {
+	while (true) {
+		Vector v;
+		v.x = random.next_float() * 2.f - 1.f;
+		v.y = random.next_float() * 2.f - 1.f;
+		v.z = random.next_float() * 2.f - 1.f;
+		if (dot(v, v) <= 1.f) {
+			return v;
+		}
+	}
+}
+
+struct Ray {
+	Vector origin;
+	Vector direction;
+	constexpr Ray(const Vector& origin, const Vector& direction): origin(origin), direction(direction) {}
+};
+
+struct Sphere {
+	Vector origin;
+	float radius;
+	constexpr Sphere(const Vector& origin, float radius): origin(origin), radius(radius) {}
+};
+
+struct ZPlane {
+	float z;
+	constexpr ZPlane(float z): z(z) {}
+};
+
+struct Rectangle {
+	float x, y, z;
+	float width, height;
+	constexpr Rectangle(float x, float y, float z, float width, float height): x(x), y(y), z(z), width(width), height(height) {}
+};
+
+struct RoundedRectangle {
+	float x, y, z;
+	float width, height;
+	float radius;
+	constexpr RoundedRectangle(float x, float y, float z, float width, float height, float radius = 0.f): x(x), y(y), z(z), width(width), height(height), radius(radius) {}
+};
+
+inline Vector intersect(const Ray& ray, const ZPlane& z_plane) {
+	const float t = (z_plane.z - ray.origin.z) / ray.direction.z;
+	return ray.origin + ray.direction * t;
+}
+
+inline bool intersect(const Ray& ray, const Rectangle& rect) {
+	if (ray.direction.z == 0.f) {
+		return false;
+	}
+	const float t = (rect.z - ray.origin.z) / ray.direction.z;
+	const Vector p = ray.origin + ray.direction * t;
+	return p.x >= rect.x && p.x <= rect.x + rect.width && p.y >= rect.y && p.y <= rect.y + rect.height;
+}
+
+inline bool intersect(const Ray& ray, const RoundedRectangle& rect) {
+	if (ray.direction.z == 0.f) {
+		return false;
+	}
+	const float t = (rect.z - ray.origin.z) / ray.direction.z;
+	Vector p = ray.origin + ray.direction * t;
+	p.z = 0.f;
+	p = p - Vector(rect.x, rect.y, 0.f);
+	if (p.x < 0.f || p.y < 0.f) {
+		return false;
+	}
+	if (p.x > rect.width || p.y > rect.height) {
+		return false;
+	}
+	if (p.x > rect.width - rect.radius) {
+		p.x = rect.width - p.x;
+	}
+	if (p.y > rect.height - rect.radius) {
+		p.y = rect.height - p.y;
+	}
+	if (p.x < rect.radius && p.y < rect.radius) {
+		Vector rv = p - Vector(rect.radius, rect.radius, 0.f);
+		return dot(rv, rv) <= rect.radius * rect.radius;
+	}
+	return true;
+}
