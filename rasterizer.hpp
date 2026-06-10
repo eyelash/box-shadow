@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2017-2025, Elias Aebi
+Copyright (c) 2017-2026, Elias Aebi
 All rights reserved.
 
 */
@@ -10,7 +10,7 @@ All rights reserved.
 #include <cstdint>
 #include <cmath>
 
-constexpr float clamp(float value, float min, float max) {
+template <class T> constexpr T clamp(T value, T min, T max) {
 	return value < min ? min : (max < value ? max : value);
 }
 
@@ -107,22 +107,39 @@ inline unsigned char dither(Random& random, float value) {
 
 class Pixmap {
 	std::vector<Color> pixels;
-	size_t width;
+	int width;
+	int height;
 public:
-	Pixmap(size_t width, size_t height): pixels(width*height), width(width) {}
-	size_t get_width() const {
+	Pixmap(int width, int height): pixels(width * height), width(width), height(height) {}
+	int get_width() const {
 		return width;
 	}
-	size_t get_height() const {
-		return pixels.size() / width;
+	int get_height() const {
+		return height;
 	}
-	Color get_pixel(size_t x, size_t y) const {
-		size_t i = y * width + x;
-		return pixels[i];
+	Color get_pixel(int x, int y) const {
+		x = clamp(x, 0, width - 1);
+		y = clamp(y, 0, height - 1);
+		return pixels[y * width + x];
 	}
-	void add_pixel(size_t x, size_t y, const Color& color) {
-		size_t i = y * width + x;
+	void set_pixel(int x, int y, const Color& color) {
+		pixels[y * width + x] = color;
+	}
+	void add_pixel(int x, int y, const Color& color) {
+		int i = y * width + x;
 		pixels[i] = pixels[i] + color;
+	}
+	void clear(const Color& color) {
+		for (size_t i = 0; i < pixels.size(); ++i) {
+			pixels[i] = color;
+		}
+	}
+	void fill_rectangle(int x_, int y_, int width, int height, const Color& color) {
+		for (int y = 0; y < height; ++y) {
+			for (int x = 0; x < width; ++x) {
+				set_pixel(x_ + x, y_ + y, color);
+			}
+		}
 	}
 	void write_png(const char* file_name) const;
 };
