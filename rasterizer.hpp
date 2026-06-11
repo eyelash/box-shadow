@@ -46,6 +46,10 @@ constexpr float dot(const Point& p0, const Point& p1) {
 	return p0.x * p1.x + p0.y * p1.y;
 }
 
+inline float length(const Point& p) {
+	return std::sqrt(dot(p, p));
+}
+
 struct Line {
 	float m, x0;
 	constexpr Line(float m, const Point& p): m(m), x0(p.x - m * p.y) {}
@@ -151,6 +155,13 @@ public:
 			yf
 		);
 	}
+	void set(int x, int y, const Color& color) {
+		pixels[y * width + x] = color;
+	}
+	void add(int x, int y, const Color& color) {
+		const int i = y * width + x;
+		pixels[i] = blend(pixels[i], color);
+	}
 	void add_pixel(int x, int y, const Color& color) {
 		int i = y * width + x;
 		pixels[i] = pixels[i] + color;
@@ -169,6 +180,98 @@ public:
 	}
 	void write_png(const char* file_name) const;
 };
+
+template <class F> void draw_graph(Pixmap& pixmap, int x_, int y_, int width, int height, const Color& color, F f) {
+	const float line_width = 1.f;
+	for (int x = 0; x < width; ++x) {
+		const float x0 = x;
+		const float x1 = x + 1;
+		const float y0 = height - f(x0 / width) * height;
+		const float y1 = height - f(x1 / width) * height;
+		const float delta_y = length(Point(x0, y0) - Point(x1, y1)) * (line_width * .5f);
+		float y2 = y0 - delta_y;
+		float y3 = y1 - delta_y;
+		float y4 = y0 + delta_y;
+		float y5 = y1 + delta_y;
+		if (y2 > y3) std::swap(y2, y3);
+		if (y4 > y5) std::swap(y4, y5);
+		for (int y = 0; y < height; ++y) {
+			const float y6 = y;
+			const float y7 = y + 1;
+			if (y2 > y7 || y5 < y6) {
+				continue;
+			}
+			float area = 0.f;
+			if (y2 < y6) {
+				if (y3 < y6) {
+					area = 1.f;
+				}
+				else {
+					const float x2 = 1.f / (y3 - y2) * (y6 - y2);
+					if (y3 < y7) {
+						// y3 is between y6 and y7
+						area = (y7 - y3) + (y3 - y6) * (x2 + 1.f) * .5f;
+					}
+					else {
+						// y3 > y7
+						const float x3 = 1.f / (y3 - y2) * (y7 - y2);
+						area = (x2 + x3) * .5f;
+					}
+				}
+			}
+			else {
+				// y2 is between y6 and y7
+				if (y3 < y7) {
+					// y3 is between y6 and y7 (since y3 >= y2 >= y6)
+					area = (y7 - y3) + (y3 - y2) * .5f;
+				}
+				else {
+					// y3 > y7
+					const float x3 = 1.f / (y3 - y2) * (y7 - y2);
+					area = (y7 - y2) * x3 * .5f;
+				}
+			}
+			if (y4 < y7) {
+				if (y4 < y6) {
+					const float x2 = 1.f / (y5 - y4) * (y6 - y4);
+					if (y5 < y7) {
+						// y5 is between y6 and y7
+						area -= (y7 - y5) + (y5 - y6) * (x2 + 1.f) * .5f;
+					}
+					else {
+						// y5 > y7
+						const float x3 = 1.f / (y5 - y4) * (y7 - y4);
+						area -= (x2 + x3) * .5f;
+					}
+				}
+				else {
+					// y4 is between y6 and y7
+					if (y5 < y7) {
+						// y5 is between y6 and y7
+						area -= (y7 - y5) + (y5 - y4) * .5f;
+					}
+					else {
+						// y5 > y7
+						const float x3 = 1.f / (y5 - y4) * (y7 - y4);
+						area -= (y7 - y4) * x3 * .5f;
+					}
+				}
+			}
+			pixmap.add(x_ + x, y_ + y, color * area);
+		}
+	}
+}
+template <class F> void draw_graph(Pixmap& pixmap, int x_, int y_, int width, int height, F f) {
+	draw_graph(pixmap, x_, y_, width, height, BLACK, f);
+}
+template <class F> void draw_graph(Pixmap& pixmap, int x_, int y_, int width, int height, float x_min, float x_max, float y_min, float y_max, const Color& color, F f) {
+	draw_graph(pixmap, x_, y_, width, height, color, [&](float x) {
+		return (f(x_min + x * (x_max - x_min)) - y_min) / (y_max - y_min);
+	});
+}
+template <class F> void draw_graph(Pixmap& pixmap, int x_, int y_, int width, int height, float x_min, float x_max, float y_min, float y_max, F f) {
+	draw_graph(pixmap, x_, y_, width, height, x_min, x_max, y_min, y_max, BLACK, f);
+}
 
 struct Vector {
 	float x, y, z;
