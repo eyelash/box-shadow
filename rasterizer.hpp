@@ -14,6 +14,10 @@ template <class T> constexpr T clamp(T value, T min, T max) {
 	return value < min ? min : (max < value ? max : value);
 }
 
+template <class T> constexpr T lerp(T v1, T v2, float f) {
+	return v1 + (v2 - v1) * f;
+}
+
 constexpr bool between(float value, float min, float max) {
 	return value >= min && value < max;
 }
@@ -73,6 +77,9 @@ struct Color {
 	constexpr Color operator +(const Color& c) const {
 		return Color(r + c.r, g + c.g, b + c.b, a + c.a);
 	}
+	constexpr Color operator -(const Color& c) const {
+		return Color(r - c.r, g - c.g, b - c.b, a - c.a);
+	}
 	constexpr Color operator *(float f) const {
 		return Color(r * f, g * f, b * f, a * f);
 	}
@@ -127,6 +134,22 @@ public:
 	}
 	void set_pixel(int x, int y, const Color& color) {
 		pixels[y * width + x] = color;
+	}
+	Color get(int x, int y) const {
+		x = clamp(x, 0, width - 1);
+		y = clamp(y, 0, height - 1);
+		return pixels[y * width + x];
+	}
+	Color get_linear(float x, float y) const {
+		const int xi = x;
+		const int yi = y;
+		const float xf = x - xi;
+		const float yf = y - yi;
+		return lerp(
+			lerp(get(xi, yi),     get(xi + 1, yi),     xf),
+			lerp(get(xi, yi + 1), get(xi + 1, yi + 1), xf),
+			yf
+		);
 	}
 	void add_pixel(int x, int y, const Color& color) {
 		int i = y * width + x;
