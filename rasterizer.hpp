@@ -80,6 +80,9 @@ struct Color {
 		return a == 0.f ? Color() : Color(r/a, g/a, b/a, a);
 	}
 };
+constexpr Color BLACK(0.f, 0.f, 0.f);
+constexpr Color WHITE(1.f, 1.f, 1.f);
+constexpr Color TRANSPARENT(0.f, 0.f, 0.f, 0.f);
 
 constexpr Color blend(const Color& dst, const Color& src) {
 	return src + dst * (1.f - src.a);
