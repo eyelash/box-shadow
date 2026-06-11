@@ -40,8 +40,8 @@ static void gaussian_blur(Pixmap& pixmap, int radius) {
 
 int main() {
 	Pixmap pixmap(300, 300);
-	pixmap.clear(Color(0, 0, 0));
-	pixmap.fill_rectangle(100, 100, 100, 100, Color(1, 1, 1));
+	pixmap.clear(BLACK);
+	fill_rectangle(pixmap, 100, 100, 100, 100, WHITE);
 	gaussian_blur(pixmap, 50);
 	pixmap.write_png("gaussian-blur.png");
 }

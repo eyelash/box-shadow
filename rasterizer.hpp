@@ -121,28 +121,20 @@ inline unsigned char dither(Random& random, float value) {
 
 class Pixmap {
 	std::vector<Color> pixels;
-	int width;
-	int height;
+	int width_;
+	int height_;
 public:
-	Pixmap(int width, int height): pixels(width * height), width(width), height(height) {}
-	int get_width() const {
-		return width;
+	Pixmap(int width_, int height_): pixels(width_ * height_), width_(width_), height_(height_) {}
+	int width() const {
+		return width_;
 	}
-	int get_height() const {
-		return height;
-	}
-	Color get_pixel(int x, int y) const {
-		x = clamp(x, 0, width - 1);
-		y = clamp(y, 0, height - 1);
-		return pixels[y * width + x];
-	}
-	void set_pixel(int x, int y, const Color& color) {
-		pixels[y * width + x] = color;
+	int height() const {
+		return height_;
 	}
 	Color get(int x, int y) const {
-		x = clamp(x, 0, width - 1);
-		y = clamp(y, 0, height - 1);
-		return pixels[y * width + x];
+		x = clamp(x, 0, width_ - 1);
+		y = clamp(y, 0, height_ - 1);
+		return pixels[y * width_ + x];
 	}
 	Color get_linear(float x, float y) const {
 		const int xi = x;
@@ -155,108 +147,88 @@ public:
 			yf
 		);
 	}
+	Color get_linear(const Point& p) const {
+		return get_linear(p.x, p.y);
+	}
 	void set(int x, int y, const Color& color) {
-		pixels[y * width + x] = color;
+		pixels[y * width_ + x] = color;
 	}
 	void add(int x, int y, const Color& color) {
-		const int i = y * width + x;
+		const int i = y * width_ + x;
 		pixels[i] = blend(pixels[i], color);
-	}
-	void add_pixel(int x, int y, const Color& color) {
-		int i = y * width + x;
-		pixels[i] = pixels[i] + color;
 	}
 	void clear(const Color& color) {
 		for (size_t i = 0; i < pixels.size(); ++i) {
 			pixels[i] = color;
 		}
 	}
-	void fill_rectangle(int x_, int y_, int width, int height, const Color& color) {
-		for (int y = 0; y < height; ++y) {
-			for (int x = 0; x < width; ++x) {
-				set_pixel(x_ + x, y_ + y, color);
-			}
-		}
-	}
 	void write_png(const char* file_name) const;
+	// deprecated
+	int get_width() const {
+		return width();
+	}
+	int get_height() const {
+		return height();
+	}
+	Color get_pixel(int x, int y) const {
+		return get(x, y);
+	}
+	void set_pixel(int x, int y, const Color& color) {
+		set(x, y, color);
+	}
+	void add_pixel(int x, int y, const Color& color) {
+		const int i = y * width_ + x;
+		pixels[i] = pixels[i] + color;
+	}
 };
 
+inline void fill_rectangle(Pixmap& pixmap, int x_, int y_, int width, int height, const Color& color) {
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			pixmap.set_pixel(x_ + x, y_ + y, color);
+		}
+	}
+}
+
 template <class F> void draw_graph(Pixmap& pixmap, int x_, int y_, int width, int height, const Color& color, F f) {
-	const float line_width = 1.f;
+	constexpr float line_width = 1.f;
 	for (int x = 0; x < width; ++x) {
-		const float x0 = x;
-		const float x1 = x + 1;
-		const float y0 = height - f(x0 / width) * height;
-		const float y1 = height - f(x1 / width) * height;
-		const float delta_y = length(Point(x0, y0) - Point(x1, y1)) * (line_width * .5f);
-		float y2 = y0 - delta_y;
-		float y3 = y1 - delta_y;
-		float y4 = y0 + delta_y;
-		float y5 = y1 + delta_y;
-		if (y2 > y3) std::swap(y2, y3);
-		if (y4 > y5) std::swap(y4, y5);
-		for (int y = 0; y < height; ++y) {
-			const float y6 = y;
-			const float y7 = y + 1;
-			if (y2 > y7 || y5 < y6) {
-				continue;
+		constexpr auto compute_area = [](float y0, float y1, float y2, float y3) -> float {
+			// compute the area below the line from (0, y2) to (1, y3)
+			// limited to the horizontal range between y0 and y1
+			if (y3 < y0) {
+				return 0.f;
 			}
-			float area = 0.f;
-			if (y2 < y6) {
-				if (y3 < y6) {
-					area = 1.f;
-				}
-				else {
-					const float x2 = 1.f / (y3 - y2) * (y6 - y2);
-					if (y3 < y7) {
-						// y3 is between y6 and y7
-						area = (y7 - y3) + (y3 - y6) * (x2 + 1.f) * .5f;
-					}
-					else {
-						// y3 > y7
-						const float x3 = 1.f / (y3 - y2) * (y7 - y2);
-						area = (x2 + x3) * .5f;
-					}
-				}
+			if (y2 > y1) {
+				return y1 - y0;
+			}
+			float area = (y3 - y2) * .5f;
+			if (y2 < y0) {
+				// subtract the area below y0
+				const float x = 1.f / (y3 - y2) * (y0 - y2);
+				area -= (2.f - x) * (y0 - y2) * .5f;
 			}
 			else {
-				// y2 is between y6 and y7
-				if (y3 < y7) {
-					// y3 is between y6 and y7 (since y3 >= y2 >= y6)
-					area = (y7 - y3) + (y3 - y2) * .5f;
-				}
-				else {
-					// y3 > y7
-					const float x3 = 1.f / (y3 - y2) * (y7 - y2);
-					area = (y7 - y2) * x3 * .5f;
-				}
+				// add the area between y0 and y2
+				area += y2 - y0;
 			}
-			if (y4 < y7) {
-				if (y4 < y6) {
-					const float x2 = 1.f / (y5 - y4) * (y6 - y4);
-					if (y5 < y7) {
-						// y5 is between y6 and y7
-						area -= (y7 - y5) + (y5 - y6) * (x2 + 1.f) * .5f;
-					}
-					else {
-						// y5 > y7
-						const float x3 = 1.f / (y5 - y4) * (y7 - y4);
-						area -= (x2 + x3) * .5f;
-					}
-				}
-				else {
-					// y4 is between y6 and y7
-					if (y5 < y7) {
-						// y5 is between y6 and y7
-						area -= (y7 - y5) + (y5 - y4) * .5f;
-					}
-					else {
-						// y5 > y7
-						const float x3 = 1.f / (y5 - y4) * (y7 - y4);
-						area -= (y7 - y4) * x3 * .5f;
-					}
-				}
+			if (y3 > y1) {
+				// subtract the area above y1
+				const float x = 1.f / (y3 - y2) * (y1 - y2);
+				area -= (1.f - x) * (y3 - y1) * .5f;
 			}
+			return area;
+		};
+		const float x0 = x;
+		const float x1 = x + 1;
+		float y2 = height - f(x0 / width) * height;
+		float y3 = height - f(x1 / width) * height;
+		if (y2 > y3) std::swap(y2, y3);
+		const float dy = length(Point(x0, y2) - Point(x1, y3)) * (line_width * .5f);
+		for (int y = 0; y < height; ++y) {
+			const float y0 = y;
+			const float y1 = y + 1;
+			const float area = compute_area(y0, y1, y2 + dy, y3 + dy) - compute_area(y0, y1, y2 - dy, y3 - dy);
 			pixmap.add(x_ + x, y_ + y, color * area);
 		}
 	}
