@@ -182,6 +182,16 @@ public:
 	}
 };
 
+template <class F> Pixmap render(int width, int height, F f) {
+	Pixmap pixmap(width, height);
+	for (int x = 0; x < width; ++x) {
+		for (int y = 0; y < height; ++y) {
+			pixmap.set(x, y, f(x, y));
+		}
+	}
+	return pixmap;
+}
+
 inline void fill_rectangle(Pixmap& pixmap, int x_, int y_, int width, int height, const Color& color) {
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
